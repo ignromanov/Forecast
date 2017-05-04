@@ -1,7 +1,12 @@
-import forecastio, datetime, pytz
+import forecastio
+import datetime
+import pytz
+import config
+
 
 def fahrenheit_to_celsius(fahrenheit):
     return (fahrenheit - 32) * 5.0 / 9.0
+
 
 def fill_time_to_data_dic(forecast_by_hours, datetime_beg, datetime_end):
     dic = {}
@@ -28,6 +33,7 @@ def fill_time_to_data_dic(forecast_by_hours, datetime_beg, datetime_end):
         ))
     return dic, aver_dic
 
+
 def average_date_datapoint(forecast_by_days, datetime_date):
     for data_point in forecast_by_days.data:
         data_point_time = data_point.time.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Europe/Moscow'))
@@ -42,7 +48,6 @@ def average_date_datapoint(forecast_by_days, datetime_date):
 
 
 
-api_key = "cf20028a34237493da18f8cbadcc966d"
 lat = 55.751244
 lng = 37.618423
 
@@ -51,7 +56,7 @@ yesterday = now - datetime.timedelta(days=1)
 tomorrow = now + datetime.timedelta(days=1)
 
 print('past weather:')
-past_forecastio = forecastio.load_forecast(api_key, lat, lng, time=now)
+past_forecastio = forecastio.load_forecast(config.FORECAST_KEY, lat, lng, time=now)
 # past_date_datapoint = average_date_datapoint(past_forecastio.daily(), now)
 past_weather_dic, past_weather_aver_dic = fill_time_to_data_dic(
     past_forecastio.hourly(),
@@ -60,7 +65,7 @@ past_weather_dic, past_weather_aver_dic = fill_time_to_data_dic(
 
 
 print('future weather:')
-future_forecastio = forecastio.load_forecast(api_key, lat, lng)
+future_forecastio = forecastio.load_forecast(config.FORECAST_KEY, lat, lng)
 # future_date_datapoint = average_date_datapoint(future_forecastio.daily(), tomorrow)
 future_weather_dic, future_weather_aver_dic = fill_time_to_data_dic(
     future_forecastio.hourly(),
@@ -87,30 +92,6 @@ if avr_temp_delta > max_temp_delta:
     print('Потеплеет на {} градуса'.format(avr_temp_delta))
 elif avr_temp_delta < -max_temp_delta:
     print('Похолодает на {} градуса'.format(-avr_temp_delta))
-
-
-
-# temp_delta_dic, precipprob_delta_dic, precipintens_delta_dic = {}, {}, {}
-# for key in past_weather_dic.keys():
-#     temp_delta_dic[key] = future_weather_dic[key].apparentTemperature - past_weather_dic[key].apparentTemperature
-#     precipprob_delta_dic[key] = future_weather_dic[key].precipProbability - past_weather_dic[key].precipProbability
-#     precipintens_delta_dic[key] = future_weather_dic[key].precipIntensity - past_weather_dic[key].precipIntensity
-#     print('time: {}, temp dif: {}, precipProb dif: {}, precipIntens dif: {}'.format(
-#         key,
-#         round(temp_delta_dic[key],1),
-#         round(precipprob_delta_dic[key],1),
-#         round(precipintens_delta_dic[key],1)))
-
-#     if abs(temp_delta_dic[key]) > max_temp_delta and not temp_changed:
-#         print('There is temperature change at {} from {} to {}'.format(
-#             key,
-#             past_weather_dic[key].apparentTemperature,
-#             future_weather_dic[key].apparentTemperature
-#         ))
-#         temp_changed = True
-
-    # if abs(precipProbability[key])
-
 
 
 

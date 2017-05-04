@@ -1,6 +1,3 @@
-
-TG_TOKEN = "324662497:AAFKDZUCNWtPa_1c_3MYwXB1vvHBiiUnoK8"
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
@@ -18,7 +15,9 @@ bot.
 """
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import logging, message_processing
+from sqliter import SQLiter
+import config
+import logging
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -30,9 +29,15 @@ logger = logging.getLogger(__name__)
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
 def start(bot, update):
-    user_dic = message_processing.find_sender_user(update)
+    c = SQLiter()
+    user_dic = c.find_user(update.message.from_user)
+    c.close()
     update.message.reply_text('Hi, {} {}!'.format(user_dic['first_name'], user_dic['last_name']))
 
+def subscribe(bot, update):
+    c = SQLiter()
+    c.subscribe(update.message.from_user.id)
+    c.close()
 
 def help(bot, update):
     update.message.reply_text('Help!')
@@ -43,7 +48,10 @@ def echo(bot, update):
 
 
 def location(bot, update):
-
+    c = SQLiter()
+    with update.message as m:
+        c.save_location(m.from_user.id, m.location.latitude, m.location.longitude)
+    c.close()
     update.message.reply_text("Your location saved")
 
 
@@ -54,7 +62,7 @@ def error(bot, update, error):
 def main():
 
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater(TG_TOKEN)
+    updater = Updater(config.TG_TOKEN)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
@@ -62,6 +70,7 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("subscribe", subscribe))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, echo))
@@ -78,7 +87,6 @@ def main():
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
-
 
 
 if __name__ == '__main__':
