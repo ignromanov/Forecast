@@ -15,6 +15,7 @@ bot.
 """
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import KeyboardButton, ReplyKeyboardMarkup
 from sqliter import SQLiter
 import config
 import logging
@@ -32,12 +33,35 @@ def start(bot, update):
     c = SQLiter()
     user_dic = c.find_user(update.message.from_user)
     c.close()
-    update.message.reply_text('Hi, {} {}!'.format(user_dic['first_name'], user_dic['last_name']))
+    update.message.reply_text('Hi, {} {}!'.format(user_dic['first_name'], user_dic['last_name']),
+                              reply_markup=getReplyKeyboardMarkup(update.message.from_user.id, 'main'))
+
+
+def getReplyKeyboardMarkup(tg_id, new_menu=''):
+    if new_menu == '':
+        pass
+        # получать текущее меню пользователя и определять новое
+
+    if new_menu == 'main':
+        newReplyKeyboardMarkup = ReplyKeyboardMarkup(
+            [['Текущая', 'На день'],
+             ['На неделю', 'Настройки']])
+
+    return newReplyKeyboardMarkup
+
 
 def subscribe(bot, update):
     c = SQLiter()
     c.subscribe(update.message.from_user.id)
     c.close()
+
+
+def preferences(bot, update):
+    location_keybord = KeyboardButton('Местоположение')
+    subscribe_keybord = KeyboardButton('Подписка')
+    update.message.reply_text('Send your location',
+                              reply_markup=ReplyKeyboardMarkup([[location_keybord, subscribe_keybord]]))
+
 
 def help(bot, update):
     update.message.reply_text('Help!')
@@ -60,7 +84,6 @@ def error(bot, update, error):
 
 
 def main():
-
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(config.TG_TOKEN)
 
@@ -71,6 +94,7 @@ def main():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("subscribe", subscribe))
+    dp.add_handler(CommandHandler("preferences", preferences))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, echo))
