@@ -34,3 +34,29 @@ class SQLiter:
         self.c.execute("REPLACE INTO subscribed VALUES ((SELECT user_id FROM Users WHERE tg_id = ?), ?)",
                   (tg_id, True))
         self.conn.commit()
+
+    def get_user_location(self, tg_id):
+        self.c.execute("SELECT latitude, longitude FROM users_position WHERE user_id in (SELECT user_id FROM Users WHERE tg_id = ?)",
+                  (tg_id, ))
+        row = self.c.fetchone()
+        if row is None:
+            print('Отсутсвует местоположение пользователя')
+        else:
+            return {'lat': row[0], 'lng': row[1]}
+
+    def get_current_subscriptions(self, time, time_delta):
+        self.c.execute('''SELECT tg_id, latitude, longitude 
+                        from Users u 
+                          LEFT JOIN users_position up 
+                            on u.user_id = up.user_id 
+                        where u.user_id in (select user_id 
+                                          from subscribed 
+                                          where subscribed and send_time BETWEEN time(?)-time(?) and time(?))''', (time, time_delta, time))
+        result = []
+        row = self.c.fetchone()
+        while row != None:
+            result.append(row)
+            row = self.c.fetchone()
+
+        return result
+

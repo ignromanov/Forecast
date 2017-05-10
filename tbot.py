@@ -15,9 +15,10 @@ bot.
 """
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from telegram import KeyboardButton, ReplyKeyboardMarkup
+from telegram import KeyboardButton, ReplyKeyboardMarkup, ChatAction
 from sqliter import SQLiter
 import config
+import forecast
 import logging
 
 # Enable logging
@@ -34,17 +35,17 @@ def start(bot, update):
     user_dic = c.find_user(update.message.from_user)
     c.close()
     update.message.reply_text('Hi, {} {}!'.format(user_dic['first_name'], user_dic['last_name']),
-                              reply_markup=getReplyKeyboardMarkup(update.message.from_user.id, 'main'))
+                              reply_markup=get_reply_keyboard_markup(update.message.from_user.id, 'main'))
 
 
-def getReplyKeyboardMarkup(tg_id, new_menu=''):
+def get_reply_keyboard_markup(tg_id, new_menu=''):
     if new_menu == '':
         pass
         # получать текущее меню пользователя и определять новое
 
     if new_menu == 'main':
         newReplyKeyboardMarkup = ReplyKeyboardMarkup(
-            [['Текущая', 'На день'],
+            [['Текущая', 'Smart weather'],
              ['На неделю', 'Настройки']])
 
     return newReplyKeyboardMarkup
@@ -69,6 +70,23 @@ def help(bot, update):
 
 def echo(bot, update):
     update.message.reply_text(update.message.text)
+
+
+def handle_text_message(bot, update):
+    bot.sendChatAction(update.message.chat_id, ChatAction.TYPING)
+
+    c = SQLiter()
+    userLocation = c.get_user_location(update.message.from_user.id)
+    c.close()
+
+    if update.message.text == 'Текущая':
+        update.message.reply_text( forecast.get_current_weather(**userLocation) )
+    elif update.message.text == 'Smart weather':
+        update.message.reply_text( forecast.get_smart_weather(**userLocation) )
+
+
+
+
 
 
 def location(bot, update):
@@ -97,7 +115,7 @@ def main():
     dp.add_handler(CommandHandler("preferences", preferences))
 
     # on noncommand i.e message - echo the message on Telegram
-    dp.add_handler(MessageHandler(Filters.text, echo))
+    dp.add_handler(MessageHandler(Filters.text, handle_text_message))
 
     dp.add_handler(MessageHandler(Filters.location, location))
 
