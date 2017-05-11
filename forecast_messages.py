@@ -1,10 +1,11 @@
 import config
 
+
 def current_weather(dp):
     return '''{emoji} 🌡️ {temp} C (ощущается как {apparent_temp} C), 
     ☁ {cloud}%'''.format(
-        emoji = get_emoji_by_icon(dp.icon), temp = int(round(dp.temperature,0)),
-        apparent_temp = int(round(dp.apparentTemperature,0)), cloud = int(round(dp.cloudCover,2)*100))
+        emoji=get_emoji_by_icon(dp.icon), temp=int(round(dp.temperature, 0)),
+        apparent_temp=int(round(dp.apparentTemperature, 0)), cloud=int(round(dp.cloudCover, 2) * 100))
 
 
 def get_emoji_by_icon(icon):
@@ -12,5 +13,3 @@ def get_emoji_by_icon(icon):
         return config.weather_emoji_dic[icon]
     else:
         return ''
-
-

@@ -3,16 +3,6 @@
 #
 # Simple Bot to reply to Telegram messages
 # This program is dedicated to the public domain under the CC0 license.
-"""
-This Bot uses the Updater class to handle the bot.
-First, a few handler functions are defined. Then, those functions are passed to
-the Dispatcher and registered at their respective places.
-Then, the bot is started and runs until we press Ctrl-C on the command line.
-Usage:
-Basic Echobot example, repeats messages.
-Press Ctrl-C on the command line or send a signal to the process to stop the
-bot.
-"""
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Job
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ChatAction
@@ -60,10 +50,10 @@ def subscribe(bot, update):
 
 
 def preferences(bot, update):
-    location_keybord = KeyboardButton('Местоположение')
-    subscribe_keybord = KeyboardButton('Подписка')
+    location_keyboard = KeyboardButton('Местоположение')
+    subscribe_keyboard = KeyboardButton('Подписка')
     update.message.reply_text('Send your location',
-                              reply_markup=ReplyKeyboardMarkup([[location_keybord, subscribe_keybord]]))
+                              reply_markup=ReplyKeyboardMarkup([[location_keyboard, subscribe_keyboard]]))
 
 
 def help(bot, update):
@@ -89,7 +79,6 @@ def handle_text_message(bot, update):
         update.message.reply_text(forecast.nearest_weather_change(**user_location))
 
 
-
 def subscription_job_callback(bot, job):
     c = SQLiter()
     list_of_users = c.get_current_subscriptions(datetime.now())
@@ -99,8 +88,6 @@ def subscription_job_callback(bot, job):
 
     for user_dic in list_of_users:
         bot.sendMessage(user_dic['tg_id'], forecast.today_smart_weather(**user_dic))
-
-
 
 
 def location(bot, update):
@@ -116,7 +103,6 @@ def error(bot, update, error):
 
 
 def main():
-
     subscription_job = Job(subscription_job_callback, config.subscr_time_delta.total_seconds())
 
     # Create the EventHandler and pass it your bot's token.

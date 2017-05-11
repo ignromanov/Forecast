@@ -2,8 +2,8 @@ import config
 import sqlite3
 from datetime import timedelta
 
-class SQLiter:
 
+class SQLiter:
     def __init__(self):
         self.conn = sqlite3.connect(config.MAIN_DB_NAME)
         self.c = self.conn.cursor()
@@ -13,7 +13,7 @@ class SQLiter:
 
     def save_location(self, tg_id, latitude, longitude):
         self.c.execute("REPLACE INTO users_position VALUES ((SELECT user_id FROM Users WHERE tg_id = ?), ?, ?)",
-                  (tg_id, latitude, longitude))
+                       (tg_id, latitude, longitude))
         self.conn.commit()
 
     def find_user(self, from_user):
@@ -33,12 +33,18 @@ class SQLiter:
 
     def subscribe(self, tg_id):
         self.c.execute("REPLACE INTO subscribed VALUES ((SELECT user_id FROM Users WHERE tg_id = ?), ?)",
-                  (tg_id, True))
+                       (tg_id, True))
         self.conn.commit()
 
     def get_user_location(self, tg_id):
-        self.c.execute("SELECT latitude, longitude FROM users_position WHERE user_id in (SELECT user_id FROM Users WHERE tg_id = ?)",
-                  (tg_id, ))
+        self.c.execute(
+            '''SELECT latitude, longitude 
+                FROM users_position 
+                WHERE user_id IN 
+                  (SELECT user_id 
+                  FROM Users 
+                  WHERE tg_id = ?)''',
+            (tg_id,))
         row = self.c.fetchone()
         if row is None:
             print('Отсутсвует местоположение пользователя')
@@ -47,19 +53,19 @@ class SQLiter:
 
     def get_current_subscriptions(self, cur_time):
         self.c.execute('''SELECT tg_id, latitude, longitude 
-                        from Users u 
+                        FROM Users u 
                           LEFT JOIN users_position up 
-                            on u.user_id = up.user_id 
-                        where u.user_id in (select user_id 
-                                          from subscribed 
-                                          where subscribed 
-                                            and time(send_time) BETWEEN time(:start_time) and time(:end_time))''',
-                       {'start_time': (cur_time - config.subscr_time_delta + timedelta(minutes=1)).strftime('%H:%M'), 'end_time': cur_time.strftime('%H:%M')})
+                            ON u.user_id = up.user_id 
+                        WHERE u.user_id IN (SELECT user_id 
+                                          FROM subscribed 
+                                          WHERE subscribed 
+                                            AND time(send_time) BETWEEN time(:start_time) AND time(:end_time))''',
+                       {'start_time': (cur_time - config.subscr_time_delta + timedelta(minutes=1)).strftime('%H:%M'),
+                        'end_time': cur_time.strftime('%H:%M')})
         result = []
         row = self.c.fetchone()
-        while row != None:
+        while row is not None:
             result.append({'tg_id': row[0], 'lat': row[1], 'lng': row[2]})
             row = self.c.fetchone()
 
         return result
-

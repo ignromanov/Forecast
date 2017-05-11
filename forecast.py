@@ -20,7 +20,7 @@ def fill_time_to_data_dic(forecast_by_hours, datetime_beg, datetime_end):
             aver_dic["precipProbability"] += data_point.precipProbability
             aver_dic["precipIntensity"] += data_point.precipIntensity
 
-    for key in aver_dic.keys(): aver_dic[key] = round(aver_dic[key] / len(dic), 2) 
+    for key in aver_dic.keys(): aver_dic[key] = round(aver_dic[key] / len(dic), 2)
 
     return dic, aver_dic
 
@@ -30,10 +30,10 @@ def average_date_datapoint(forecast_by_days, datetime_date):
         data_point_time = data_point.time.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Europe/Moscow'))
         # if data_point_time.date == datetime_date.date:
         print("average by day - temp: {} - {}, precibProb: {}, precibIntens: {}".format(
-            round(data_point.apparentTemperatureMin,1),
-            round(data_point.apparentTemperatureMax,1),
-            round(data_point.precipProbability,1),
-            round(data_point.precipIntensity,1)))
+            round(data_point.apparentTemperatureMin, 1),
+            round(data_point.apparentTemperatureMax, 1),
+            round(data_point.precipProbability, 1),
+            round(data_point.precipIntensity, 1)))
         return data_point
 
 
@@ -54,7 +54,6 @@ def today_smart_weather(lat, lng, **kwargs):
         yesterday.replace(hour=7),
         yesterday.replace(hour=23))
 
-
     # print('future weather:')
     future_forecastio = forecastio.load_forecast(config.FORECAST_KEY, lat, lng)
     future_weather_dic, future_weather_aver_dic = fill_time_to_data_dic(
@@ -63,8 +62,6 @@ def today_smart_weather(lat, lng, **kwargs):
         now.replace(hour=23))
 
     return compare_avr_weathers(past_weather_aver_dic, future_weather_aver_dic)
-
-
 
 
 def nearest_weather_change(lat, lng, **kwargs):
@@ -108,8 +105,8 @@ def compare_daily_weathers(past_data_point, future_data_point):
                     "apparentTemperature": past_data_point.apparentTemperatureMax}
 
     future_weather = {"precipProbability": future_data_point.precipProbability,
-                    "precipIntensity": future_data_point.precipIntensity,
-                    "apparentTemperature": future_data_point.apparentTemperatureMax}
+                      "precipIntensity": future_data_point.precipIntensity,
+                      "apparentTemperature": future_data_point.apparentTemperatureMax}
 
     return 'Date: {} : {}\n'.format(
         future_data_point.time.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Europe/Moscow')),
