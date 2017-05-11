@@ -1,5 +1,6 @@
 import config
 import sqlite3
+from datetime import timedelta
 
 class SQLiter:
 
@@ -44,18 +45,20 @@ class SQLiter:
         else:
             return {'lat': row[0], 'lng': row[1]}
 
-    def get_current_subscriptions(self, time, time_delta):
+    def get_current_subscriptions(self, cur_time):
         self.c.execute('''SELECT tg_id, latitude, longitude 
                         from Users u 
                           LEFT JOIN users_position up 
                             on u.user_id = up.user_id 
                         where u.user_id in (select user_id 
                                           from subscribed 
-                                          where subscribed and send_time BETWEEN time(?)-time(?) and time(?))''', (time, time_delta, time))
+                                          where subscribed 
+                                            and time(send_time) BETWEEN time(:start_time) and time(:end_time))''',
+                       {'start_time': (cur_time - config.subscr_time_delta + timedelta(minutes=1)).strftime('%H:%M'), 'end_time': cur_time.strftime('%H:%M')})
         result = []
         row = self.c.fetchone()
         while row != None:
-            result.append(row)
+            result.append({'tg_id': row[0], 'lat': row[1], 'lng': row[2]})
             row = self.c.fetchone()
 
         return result

@@ -14,12 +14,13 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Job
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ChatAction
 from sqliter import SQLiter
 import config
 import forecast
 import logging
+from datetime import datetime
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -39,16 +40,17 @@ def start(bot, update):
 
 
 def get_reply_keyboard_markup(tg_id, new_menu=''):
+    new_rkm = ''
     if new_menu == '':
         pass
         # получать текущее меню пользователя и определять новое
 
     if new_menu == 'main':
-        newReplyKeyboardMarkup = ReplyKeyboardMarkup(
+        new_rkm = ReplyKeyboardMarkup(
             [['Текущая', 'Smart weather'],
              ['На неделю', 'Настройки']])
 
-    return newReplyKeyboardMarkup
+    return new_rkm
 
 
 def subscribe(bot, update):
@@ -76,15 +78,27 @@ def handle_text_message(bot, update):
     bot.sendChatAction(update.message.chat_id, ChatAction.TYPING)
 
     c = SQLiter()
-    userLocation = c.get_user_location(update.message.from_user.id)
+    user_location = c.get_user_location(update.message.from_user.id)
     c.close()
 
     if update.message.text == 'Текущая':
-        update.message.reply_text( forecast.get_current_weather(**userLocation) )
+        update.message.reply_text(forecast.current_weather(**user_location))
     elif update.message.text == 'Smart weather':
-        update.message.reply_text( forecast.get_smart_weather(**userLocation) )
+        update.message.reply_text(forecast.today_smart_weather(**user_location))
+    elif update.message.text == 'На неделю':
+        update.message.reply_text(forecast.nearest_weather_change(**user_location))
 
 
+
+def subscription_job_callback(bot, job):
+    c = SQLiter()
+    list_of_users = c.get_current_subscriptions(datetime.now())
+    c.close()
+    if len(list_of_users) == 0:
+        return
+
+    for user_dic in list_of_users:
+        bot.sendMessage(user_dic['tg_id'], forecast.today_smart_weather(**user_dic))
 
 
 
@@ -102,8 +116,12 @@ def error(bot, update, error):
 
 
 def main():
+
+    subscription_job = Job(subscription_job_callback, config.subscr_time_delta.total_seconds())
+
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(config.TG_TOKEN)
+    updater.job_queue.put(subscription_job)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
