@@ -26,20 +26,17 @@ def start(bot, update):
     user_dic = c.find_user(update.message.from_user)
     c.close()
     update.message.reply_text('Hi, {} {}!'.format(user_dic['first_name'], user_dic['last_name']),
-                              reply_markup=get_reply_keyboard_markup(update.message.from_user.id, 'main'))
+                              reply_markup=reply_keyboard_markup(update.message.from_user.id, 'menu_0'))
 
 
-def get_reply_keyboard_markup(tg_id, new_menu=''):
-    new_rkm = ''
-    if new_menu == '':
-        pass
-        # получать текущее меню пользователя и определять новое
+def reply_keyboard_markup(tg_id, new_menu):
+    # c = SQLiter()
+    # user_menu = c.get_user_menu(tg_id)
+    # c.close()
 
-    if new_menu == 'main':
-        new_rkm = ReplyKeyboardMarkup(
-            [['Текущая', 'Smart weather'],
-             ['На неделю', 'Настройки']])
+    new_rkm = ReplyKeyboardMarkup(config.bot_menu_tree[new_menu])
 
+    # c.set_user_menu(tg_id, new_menu)
     return new_rkm
 
 
@@ -71,17 +68,28 @@ def handle_text_message(bot, update):
     user_location = c.get_user_location(update.message.from_user.id)
     c.close()
 
-    if update.message.text == 'Текущая':
-        update.message.reply_text(forecast.current_weather(**user_location))
-    elif update.message.text == 'Smart weather':
-        update.message.reply_text(forecast.today_smart_weather(**user_location))
-    elif update.message.text == 'На неделю':
-        update.message.reply_text(forecast.nearest_weather_change(**user_location))
+    with update.message as um, config.bot_menu_tree as bm:
+        if um.text == bm['menu_0_0'][0][1]:  # 'Текущая'
+            um.reply_text(forecast.current_weather(**user_location))
+        elif um.text == bm['menu_0_0'][0][0]:  # 'Smart weather'
+            um.reply_text(forecast.today_smart_weather(**user_location))
+        elif um.text == bm['menu_0_0'][1][0]:  # 'Ближайшая смена погоды'
+            um.reply_text(forecast.nearest_weather_change(**user_location))
+        elif um.text == bm['menu_0'][0]:  # Погода
+            um.reply_text('Какая погода вам интересна?',
+                          reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_0'))
+        elif um.text == bm['menu_0'][1]:  # Настройки
+            um.reply_text('Настройки бота',
+                          reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_1'))
+        elif um.text == bm['menu_0_0'][1][1] or um.text == bm['menu_0_1'][1][1]:  # Назад
+            um.reply_text('Главное меню',
+                          reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0'))
+
 
 
 def subscription_job_callback(bot, job):
     c = SQLiter()
-    list_of_users = c.get_current_subscriptions(datetime.now())
+    list_of_users = c.current_subscriptions(datetime.now())
     c.close()
     if len(list_of_users) == 0:
         return

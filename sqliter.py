@@ -51,7 +51,7 @@ class SQLiter:
         else:
             return {'lat': row[0], 'lng': row[1]}
 
-    def get_current_subscriptions(self, cur_time):
+    def current_subscriptions(self, cur_time):
         self.c.execute('''SELECT tg_id, latitude, longitude 
                         FROM Users u 
                           LEFT JOIN users_position up 
@@ -69,3 +69,19 @@ class SQLiter:
             row = self.c.fetchone()
 
         return result
+
+    def get_user_menu(self, tg_id):
+        self.c.execute('''select menu
+                            from users_menu
+                            where user_id in (select user_id from Users where tg_id = ?)''',
+                       tg_id)
+        row = self.c.fetchone()
+        if row is None:
+            return ''
+        else:
+            return row[0]
+
+    def set_user_menu(self, tg_id, menu):
+        self.c.execute('''replace into users_menu
+                            values ((select user_id from Users where tg_id = ?), ?)''',
+                       tg_id, menu)
