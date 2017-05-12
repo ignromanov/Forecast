@@ -1,5 +1,6 @@
 import sqlite3
-from datetime import timedelta
+import pytz
+from datetime import timedelta, datetime
 
 from config import config
 
@@ -12,9 +13,9 @@ class SQLiter:
     def close(self):
         self.conn.close()
 
-    def save_location(self, tg_id, latitude, longitude):
-        self.c.execute("REPLACE INTO users_position VALUES ((SELECT user_id FROM Users WHERE tg_id = ?), ?, ?)",
-                       (tg_id, latitude, longitude))
+    def save_location(self, tg_id, latitude, longitude, timezone):
+        self.c.execute("REPLACE INTO users_position VALUES ((SELECT user_id FROM Users WHERE tg_id = ?), ?, ?, ?)",
+                       (tg_id, latitude, longitude, timezone))
         self.conn.commit()
 
     def find_user(self, from_user):
@@ -32,14 +33,18 @@ class SQLiter:
 
         return result_dic
 
-    def subscribe(self, tg_id):
-        self.c.execute("REPLACE INTO subscribed VALUES ((SELECT user_id FROM Users WHERE tg_id = ?), ?)",
-                       (tg_id, True))
+    def subscribe(self, tg_id, send_time = config.subsct_default_time):
+        dt_send_time = datetime.strptime(send_time, '%H:%M')
+        send_time = datetime.now(pytz.timezone(self.get_user_location(tg_id)['tz'])).\
+            replace(hour=dt_send_time.hour, minute=dt_send_time.minute, second=dt_send_time.second).\
+            astimezone(pytz.utc).strftime('%H:%M')
+        self.c.execute("REPLACE INTO subscribed VALUES ((SELECT user_id FROM Users WHERE tg_id = ?), ?, ?)",
+                       (tg_id, True, send_time))
         self.conn.commit()
 
     def get_user_location(self, tg_id):
         self.c.execute(
-            '''SELECT latitude, longitude 
+            '''SELECT latitude, longitude, timezone 
                 FROM users_position 
                 WHERE user_id IN 
                   (SELECT user_id 
@@ -50,7 +55,7 @@ class SQLiter:
         if row is None:
             print('Отсутсвует местоположение пользователя')
         else:
-            return {'lat': row[0], 'lng': row[1]}
+            return {'lat': row[0], 'lng': row[1], 'tz': row[2]}
 
     def current_subscriptions(self, cur_time):
         self.c.execute('''SELECT tg_id, latitude, longitude 
@@ -86,3 +91,26 @@ class SQLiter:
         self.c.execute('''replace into users_menu
                             values ((select user_id from Users where tg_id = ?), ?)''',
                        tg_id, menu)
+
+
+    def user_preferences(self, tg_id):
+        self.c.execute(
+            '''SELECT
+                  latitude,
+                  longitude,
+                  subscribed,
+                  send_time,
+                  timezone
+                FROM users_position up
+                  LEFT JOIN subscribed s
+                    ON up.user_id = s.user_id
+                WHERE up.user_id IN (SELECT user_id
+                                     FROM Users
+                                     WHERE tg_id = ?)''', (tg_id, ))
+        row = self.c.fetchone()
+        dt_send_time = datetime.strptime(row[3], '%H:%M')
+        send_time = datetime.now(pytz.utc).\
+            replace(hour=dt_send_time.hour, minute=dt_send_time.minute).\
+            astimezone(pytz.timezone(row[4])).strftime('%H:%M')
+
+        return {'lat': row[0], 'lng': row[1], 'subscribed': row[2], 'send_time': send_time}

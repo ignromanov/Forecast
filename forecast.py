@@ -37,13 +37,16 @@ def average_date_datapoint(forecast_by_days, datetime_date):
         return data_point
 
 
-def current_weather(lat, lng):
+def current_weather(lat, lng, tz):
     return forecast_messages.current_weather(
         forecastio.load_forecast(config.FORECAST_KEY, lat, lng).currently())
 
+def get_timezone_by_coords(lat, lng):
+    return forecastio.load_forecast(config.FORECAST_KEY, lat, lng, lazy=True).json['timezone']
 
-def today_smart_weather(lat, lng, **kwargs):
-    now = datetime.now(tz=pytz.timezone('Europe/Moscow')).replace(minute=0, second=0, microsecond=0)
+
+def today_smart_weather(lat, lng, tz, **kwargs):
+    now = datetime.now(pytz.timezone(tz)).replace(minute=0, second=0, microsecond=0)
     yesterday = now - timedelta(days=1)
     tomorrow = now + timedelta(days=1)
 
@@ -64,8 +67,8 @@ def today_smart_weather(lat, lng, **kwargs):
     return compare_avr_weathers(past_weather_aver_dic, future_weather_aver_dic)
 
 
-def nearest_weather_change(lat, lng, **kwargs):
-    now = datetime.now(tz=pytz.timezone('Europe/Moscow')).replace(minute=0, second=0, microsecond=0)
+def nearest_weather_change(lat, lng, tz):
+    now = datetime.now(pytz.timezone(tz)).replace(minute=0, second=0, microsecond=0)
     yesterday = now - timedelta(days=1)
 
     # print('past weather:')
@@ -109,5 +112,5 @@ def compare_daily_weathers(past_data_point, future_data_point):
                       "apparentTemperature": future_data_point.apparentTemperatureMax}
 
     return 'Date: {} : {}\n'.format(
-        future_data_point.time.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Europe/Moscow')),
+        future_data_point.time,
         compare_avr_weathers(past_weather, future_weather))

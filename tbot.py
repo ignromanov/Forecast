@@ -10,6 +10,7 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup, ChatAction
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Job
 
 import forecast
+import pytz
 from config import config
 from sqliter import SQLiter
 
@@ -47,12 +48,6 @@ def subscribe(bot, update):
     c.close()
 
 
-def preferences(bot, update):
-    location_keyboard = KeyboardButton('Местоположение')
-    subscribe_keyboard = KeyboardButton('Подписка')
-    update.message.reply_text('Send your location',
-                              reply_markup=ReplyKeyboardMarkup([[location_keyboard, subscribe_keyboard]]))
-
 
 def help(bot, update):
     update.message.reply_text('Help!')
@@ -66,31 +61,43 @@ def handle_text_message(bot, update):
     bot.sendChatAction(update.message.chat_id, ChatAction.TYPING)
 
     c = SQLiter()
-    user_location = c.get_user_location(update.message.from_user.id)
-    c.close()
+    user_position = c.get_user_location(update.message.from_user.id)
 
     um, bm = update.message, config.bot_menu_tree
     if um.text == bm['menu_0_0'][0][1]:  # 'Текущая'
-        um.reply_text(forecast.current_weather(**user_location))
+        um.reply_text(forecast.current_weather(**user_position))
     elif um.text == bm['menu_0_0'][0][0]:  # 'Smart weather'
-        um.reply_text(forecast.today_smart_weather(**user_location))
+        um.reply_text(forecast.today_smart_weather(**user_position))
     elif um.text == bm['menu_0_0'][1][0]:  # 'Ближайшая смена погоды'
-        um.reply_text(forecast.nearest_weather_change(**user_location))
+        um.reply_text(forecast.nearest_weather_change(**user_position))
     elif um.text == bm['menu_0'][0][0]:  # Погода
         um.reply_text('Какая погода вам интересна?',
                       reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_0'))
     elif um.text == bm['menu_0'][0][1]:  # Настройки
-        um.reply_text('Настройки бота',
+        p = c.user_preferences(um.from_user.id)
+        um.reply_text(
+            ('Текущие настройки:\n'
+             'latitude: {lat}, longitude: {lng}\n'
+             'subscribed: {subscribed}, send time: {send_time}').format(**p),
                       reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_1'))
+    elif um.text == bm['menu_0_1'][0][1]:  # Язык
+        um.reply_text(
+            'Воспользуйтесь одной из команд для смены языка:\n'
+            '/language_ru - русский язык\n'
+            '/language_en - english')
+    elif um.text == bm['menu_0_1'][1][0]:  # Подписка
+        subscribe(bot, update)
+        um.reply_text('Подписка обновлена')
     elif um.text == bm['menu_0_0'][1][1] or um.text == bm['menu_0_1'][1][1]:  # Назад
         um.reply_text('Главное меню',
                       reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0'))
+    c.close()
 
 
 
 def subscription_job_callback(bot, job):
     c = SQLiter()
-    list_of_users = c.current_subscriptions(datetime.now())
+    list_of_users = c.current_subscriptions(datetime.now(config.SERVER_TZ).astimezone(pytz.utc))
     c.close()
     if len(list_of_users) == 0:
         return
@@ -101,8 +108,9 @@ def subscription_job_callback(bot, job):
 
 def location(bot, update):
     c = SQLiter()
-    with update.message as m:
-        c.save_location(m.from_user.id, m.location.latitude, m.location.longitude)
+    m = update.message
+    c.save_location(m.from_user.id, m.location.latitude, m.location.longitude,
+                    forecast.get_timezone_by_coords(m.location.latitude, m.location.longitude))
     c.close()
     update.message.reply_text("Your location saved")
 
@@ -124,8 +132,8 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
-    dp.add_handler(CommandHandler("subscribe", subscribe))
-    dp.add_handler(CommandHandler("preferences", preferences))
+    dp.add_handler(CommandHandler("language_ru", subscribe))
+    # dp.add_handler(CommandHandler("preferences", preferences))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, handle_text_message))
