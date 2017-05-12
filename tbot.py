@@ -4,13 +4,14 @@
 # Simple Bot to reply to Telegram messages
 # This program is dedicated to the public domain under the CC0 license.
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Job
-from telegram import KeyboardButton, ReplyKeyboardMarkup, ChatAction
-from sqliter import SQLiter
-import config
-import forecast
 import logging
 from datetime import datetime
+from telegram import KeyboardButton, ReplyKeyboardMarkup, ChatAction
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Job
+
+import forecast
+from config import config
+from sqliter import SQLiter
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -68,22 +69,22 @@ def handle_text_message(bot, update):
     user_location = c.get_user_location(update.message.from_user.id)
     c.close()
 
-    with update.message as um, config.bot_menu_tree as bm:
-        if um.text == bm['menu_0_0'][0][1]:  # 'Текущая'
-            um.reply_text(forecast.current_weather(**user_location))
-        elif um.text == bm['menu_0_0'][0][0]:  # 'Smart weather'
-            um.reply_text(forecast.today_smart_weather(**user_location))
-        elif um.text == bm['menu_0_0'][1][0]:  # 'Ближайшая смена погоды'
-            um.reply_text(forecast.nearest_weather_change(**user_location))
-        elif um.text == bm['menu_0'][0]:  # Погода
-            um.reply_text('Какая погода вам интересна?',
-                          reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_0'))
-        elif um.text == bm['menu_0'][1]:  # Настройки
-            um.reply_text('Настройки бота',
-                          reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_1'))
-        elif um.text == bm['menu_0_0'][1][1] or um.text == bm['menu_0_1'][1][1]:  # Назад
-            um.reply_text('Главное меню',
-                          reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0'))
+    um, bm = update.message, config.bot_menu_tree
+    if um.text == bm['menu_0_0'][0][1]:  # 'Текущая'
+        um.reply_text(forecast.current_weather(**user_location))
+    elif um.text == bm['menu_0_0'][0][0]:  # 'Smart weather'
+        um.reply_text(forecast.today_smart_weather(**user_location))
+    elif um.text == bm['menu_0_0'][1][0]:  # 'Ближайшая смена погоды'
+        um.reply_text(forecast.nearest_weather_change(**user_location))
+    elif um.text == bm['menu_0'][0][0]:  # Погода
+        um.reply_text('Какая погода вам интересна?',
+                      reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_0'))
+    elif um.text == bm['menu_0'][0][1]:  # Настройки
+        um.reply_text('Настройки бота',
+                      reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_1'))
+    elif um.text == bm['menu_0_0'][1][1] or um.text == bm['menu_0_1'][1][1]:  # Назад
+        um.reply_text('Главное меню',
+                      reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0'))
 
 
 

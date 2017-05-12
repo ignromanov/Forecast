@@ -1,6 +1,7 @@
-import config
 import sqlite3
 from datetime import timedelta
+
+from config import config
 
 
 class SQLiter:

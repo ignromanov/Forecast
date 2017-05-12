@@ -1,8 +1,8 @@
 import forecastio
-import forecast_messages
-from datetime import datetime, timedelta
 import pytz
-import config
+from datetime import datetime, timedelta
+
+from config import config, forecast_messages
 
 
 def fahrenheit_to_celsius(fahrenheit):

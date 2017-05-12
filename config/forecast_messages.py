@@ -1,4 +1,4 @@
-import config
+from config import config
 
 
 def current_weather(dp):
