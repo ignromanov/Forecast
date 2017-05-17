@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ChatAction
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Job
+from menu import handle_user_command, get_reply_keyboard, get_reply_message
 
 import forecast
 import pytz
@@ -27,27 +28,9 @@ def start(bot, update):
     c = SQLiter()
     user_dic = c.find_user(update.message.from_user)
     c.close()
-    update.message.reply_text('Hi, {} {}!'.format(user_dic['first_name'], user_dic['last_name']),
-                              reply_markup=reply_keyboard_markup(update.message.from_user.id, 'menu_0'))
-
-
-def reply_keyboard_markup(tg_id, new_menu):
-    # c = SQLiter()
-    # user_menu = c.get_user_menu(tg_id)
-    # c.close()
-
-    new_rkm = ReplyKeyboardMarkup(config.bot_menu_tree[new_menu])
-
-    # c.set_user_menu(tg_id, new_menu)
-    return new_rkm
-
-
-def subscribe(bot, update):
-    c = SQLiter()
-    c.subscribe(update.message.from_user.id)
-    c.close()
-
-
+    # update.message.reply_text('Hi, {} {}!'.format(user_dic['first_name'], user_dic['last_name']),
+    #                           reply_markup=reply_keyboard_markup(update.message.from_user.id, 'menu_0'))
+    handle_user_command(bot, update, update.message.text)
 
 def help(bot, update):
     update.message.reply_text('Help!')
@@ -59,41 +42,49 @@ def echo(bot, update):
 
 def handle_text_message(bot, update):
     bot.sendChatAction(update.message.chat_id, ChatAction.TYPING)
+    handle_user_command(bot, update, update.message.text)
 
+def into_menu(bot, update, menu_path):
+    update.message.reply_text(get_reply_message(menu_path, update.message.from_user.id), reply_markup=get_reply_keyboard(menu_path))
+    return {'menu_path': menu_path}
+
+def back_menu(bot, update, menu_path):
+    menu_path = '.'.join(menu_path.split('.')[:-2])
+    update.message.reply_text(get_reply_message(menu_path, update.message.from_user.id), reply_markup=get_reply_keyboard(menu_path))
+    return {'menu_path': menu_path}
+
+def smart_weather(bot, update, **kwargs):
     c = SQLiter()
     user_position = c.get_user_location(update.message.from_user.id)
+    c.close()
+    update.message.reply_text(forecast.today_smart_weather(**user_position))
 
-    um, bm = update.message, config.bot_menu_tree
-    if um.text == bm['menu_0_0'][0][1]:  # 'Текущая'
-        um.reply_text(forecast.current_weather(**user_position))
-    elif um.text == bm['menu_0_0'][0][0]:  # 'Smart weather'
-        um.reply_text(forecast.today_smart_weather(**user_position))
-    elif um.text == bm['menu_0_0'][1][0]:  # 'Ближайшая смена погоды'
-        um.reply_text(forecast.nearest_weather_change(**user_position))
-    elif um.text == bm['menu_0'][0][0]:  # Погода
-        um.reply_text('Какая погода вам интересна?',
-                      reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_0'))
-    elif um.text == bm['menu_0'][0][1]:  # Настройки
-        p = c.user_preferences(um.from_user.id)
-        um.reply_text(
-            ('Текущие настройки:\n'
-             'latitude: {lat}, longitude: {lng}\n'
-             'subscribed: {subscribed}, send time: {send_time}').format(**p),
-                      reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0_1'))
-    elif um.text == bm['menu_0_1'][0][1]:  # Язык
-        um.reply_text(
+def current_weather(bot, update, **kwargs):
+    c = SQLiter()
+    user_position = c.get_user_location(update.message.from_user.id)
+    c.close()
+    update.message.reply_text(forecast.current_weather(**user_position))
+
+def nearest_smart_weather(bot, update, **kwargs):
+    c = SQLiter()
+    user_position = c.get_user_location(update.message.from_user.id)
+    c.close()
+    update.message.reply_text(forecast.nearest_weather_change(**user_position))
+
+def get_location(bot, update, **kwargs):
+    pass
+
+def set_language(bot, update, **kwargs):
+    update.message.reply_text(
             'Воспользуйтесь одной из команд для смены языка:\n'
             '/language_ru - русский язык\n'
             '/language_en - english')
-    elif um.text == bm['menu_0_1'][1][0]:  # Подписка
-        subscribe(bot, update)
-        um.reply_text('Подписка обновлена')
-    elif um.text == bm['menu_0_0'][1][1] or um.text == bm['menu_0_1'][1][1]:  # Назад
-        um.reply_text('Главное меню',
-                      reply_markup=reply_keyboard_markup(um.from_user.id, 'menu_0'))
+
+def subscribe(bot, update, **kwargs):
+    c = SQLiter()
+    c.subscribe(update.message.from_user.id)
     c.close()
-
-
+    update.message.reply_text('Подписка обновлена')
 
 def subscription_job_callback(bot, job):
     c = SQLiter()

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import sqlite3
 import pytz
 from datetime import timedelta, datetime
@@ -58,7 +61,7 @@ class SQLiter:
             return {'lat': row[0], 'lng': row[1], 'tz': row[2]}
 
     def current_subscriptions(self, cur_time):
-        self.c.execute('''SELECT tg_id, latitude, longitude 
+        self.c.execute('''SELECT tg_id, latitude, longitude, timezone 
                         FROM Users u 
                           LEFT JOIN users_position up 
                             ON u.user_id = up.user_id 
@@ -71,7 +74,7 @@ class SQLiter:
         result = []
         row = self.c.fetchone()
         while row is not None:
-            result.append({'tg_id': row[0], 'lat': row[1], 'lng': row[2]})
+            result.append({'tg_id': row[0], 'lat': row[1], 'lng': row[2], 'tz': row[3]})
             row = self.c.fetchone()
 
         return result
@@ -80,17 +83,19 @@ class SQLiter:
         self.c.execute('''select menu
                             from users_menu
                             where user_id in (select user_id from Users where tg_id = ?)''',
-                       tg_id)
+                       (tg_id,))
         row = self.c.fetchone()
-        if row is None:
-            return ''
+        if row is None or row[0] == '':
+            self.set_user_menu(tg_id, 'main')
+            return 'main'
         else:
             return row[0]
 
     def set_user_menu(self, tg_id, menu):
         self.c.execute('''replace into users_menu
                             values ((select user_id from Users where tg_id = ?), ?)''',
-                       tg_id, menu)
+                       (tg_id, menu))
+        self.conn.commit()
 
 
     def user_preferences(self, tg_id):
