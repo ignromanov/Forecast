@@ -11,7 +11,6 @@ import pytz
 from telegram import ChatAction
 from telegram.ext import Updater, MessageHandler, Filters, Job
 
-import weatherForecast
 from SQLiter import SQLiter
 from config import __config__
 from userCommandHandling import UserCommandHandling
