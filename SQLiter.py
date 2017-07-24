@@ -2,18 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import sqlite3
-import pytz
 from datetime import timedelta, datetime
 
-from config import config
+import pytz
+
+from config import __config__
 
 
 class SQLiter:
+
     def __init__(self):
-        self.conn = sqlite3.connect(config.MAIN_DB_NAME)
+        self.conn = sqlite3.connect(__config__.MAIN_DB_NAME)
         self.c = self.conn.cursor()
 
-    def close(self):
+    def __del__(self):
         self.conn.close()
 
     def save_location(self, tg_id, latitude, longitude, timezone):
@@ -36,7 +38,7 @@ class SQLiter:
 
         return result_dic
 
-    def subscribe(self, tg_id, send_time = config.subsct_default_time):
+    def subscribe(self, tg_id, send_time = __config__.subsct_default_time):
         dt_send_time = datetime.strptime(send_time, '%H:%M')
         send_time = datetime.now(pytz.timezone(self.get_user_location(tg_id)['tz'])).\
             replace(hour=dt_send_time.hour, minute=dt_send_time.minute, second=dt_send_time.second).\
@@ -59,6 +61,7 @@ class SQLiter:
             print('Отсутсвует местоположение пользователя')
         else:
             return {'lat': row[0], 'lng': row[1], 'tz': row[2]}
+            # return {'lat': row[0], 'lng': row[1]}
 
     def current_subscriptions(self, cur_time):
         self.c.execute('''SELECT tg_id, latitude, longitude, timezone 
@@ -69,7 +72,7 @@ class SQLiter:
                                           FROM subscribed 
                                           WHERE subscribed 
                                             AND time(send_time) BETWEEN time(:start_time) AND time(:end_time))''',
-                       {'start_time': (cur_time - config.subscr_time_delta + timedelta(minutes=1)).strftime('%H:%M'),
+                       {'start_time': (cur_time - __config__.subscr_time_delta + timedelta(minutes=1)).strftime('%H:%M'),
                         'end_time': cur_time.strftime('%H:%M')})
         result = []
         row = self.c.fetchone()
