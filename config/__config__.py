@@ -19,6 +19,6 @@ SERVER_TZ = timezone('Europe/Moscow')
 temp_delta = 4
 precipintens_delta = 0.3
 
-subscr_time_delta = timedelta(minutes=30, seconds=0)
+subscr_time_delta = timedelta(hours=3, minutes=0, seconds=0)
 subsct_default_time = '08:00'
 

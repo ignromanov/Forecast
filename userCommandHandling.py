@@ -4,7 +4,6 @@
 from weatherForecast import WeatherForecast
 from userButtonsMenu import UserButtonsMenu
 from SQLiter import SQLiter
-# from smartWeatherBot import SmartWeatherBot
 
 
 class UserCommandHandling(object):
