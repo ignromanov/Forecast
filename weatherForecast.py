@@ -118,16 +118,23 @@ class WeatherForecast(object):
         return filtered_datapoints, avr_weather
 
     @staticmethod
-    def _compare_avr_weathers(yesterday_avr_weather, today_avr_weather):
+    def _get_weather_change_message(weather1, weather2):
+        return 't: {} >> {}, pp: {} >> {}, pi: {} >> {}'.format(
+            weather1["apparentTemperature"], weather2["apparentTemperature"],
+            weather1["precipProbability"], weather2["precipProbability"],
+            weather1["precipIntensity"], weather2["precipIntensity"])
+
+    @staticmethod
+    def _compare_avr_weathers(self, yesterday_avr_weather, today_avr_weather):
         message = ''
 
         if yesterday_avr_weather["precipProbability"] > 0.0 and today_avr_weather["precipProbability"] == 0.0:
             message = ('Осадки прекратятся ')
         elif yesterday_avr_weather["precipProbability"] == 0.0 and today_avr_weather["precipProbability"] > 0.0:
             if today_avr_weather["precipIntensity"] > __config__.precipintens_delta:
-                message += ('Будут интенсивные осадки ')
+                message += ('Возможны интенсивные осадки ')
             else:
-                message += ('Будут осадки слабой интенсивности ')
+                message += ('Возможны осадки слабой интенсивности ')
 
         avr_temp_delta = round(today_avr_weather["apparentTemperature"] - yesterday_avr_weather["apparentTemperature"],
                                0)
@@ -137,8 +144,9 @@ class WeatherForecast(object):
             message += ('Похолодает на {} градуса').format(-avr_temp_delta)
 
         if not message:
-            message = ('Существенного изменения погоды в ближайшие сутки не ожидается')
+            message = ('Изменения погоды маловероятны.')
 
+        message += '\n' + self._get_weather_change_message(yesterday_avr_weather, today_avr_weather)
         return message
 
     def _compare_daily_weathers(self, prev_datapoint, next_datapoint):
